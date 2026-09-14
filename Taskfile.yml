@@ -1,0 +1,49 @@
+version: '3'
+
+vars:
+  GO_VERSION: '1.26.4'
+  GOLANGCI_LINT_VERSION: 'v2.13.2'
+  GCI_VERSION: 'v0.14.0'
+  GOFUMPT_VERSION: 'v0.12.0'
+  GOLINES_VERSION: 'v0.15.0'
+
+  BIN_DIR: '{{.ROOT_DIR}}/bin'
+  GOLANGCI_LINT_PATH: '{{.BIN_DIR}}/golangci-lint'
+  GCI_PATH: '{{.BIN_DIR}}/gci'
+  GOFUMPT_PATH: '{{.BIN_DIR}}/gofumpt'
+  GOLINES_PATH: '{{.BIN_DIR}}/golines'
+
+tasks:
+  bin:
+    desc: Create bin directory
+    cmds:
+      - mkdir -p {{.BIN_DIR}}
+    status:
+      - test -d {{.BIN_DIR}}
+  install:
+    desc: Install linter and formatters
+    deps: [bin]
+    env:
+      GOBIN: '{{.BIN_DIR}}'
+    cmds:
+      - go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@{{.GOLANGCI_LINT_VERSION}}
+      - go install github.com/daixiang0/gci@{{.GCI_VERSION}}
+      - go install mvdan.cc/gofumpt@{{.GOFUMPT_VERSION}}
+      - go install github.com/golangci/golines@{{.GOLINES_VERSION}}
+    status:
+      - test -x {{.GOLANGCI_LINT_PATH}}
+      - test -x {{.GCI_PATH}}
+      - test -x {{.GOFUMPT_PATH}}
+      - test -x {{.GOLINES_PATH}}
+  lint:
+    desc: Run golangci-lint
+    deps: [install]
+    cmds:
+      - '{{.GOLANGCI_LINT_PATH}} run ./... --config={{.ROOT_DIR}}/.golangci.yml'
+  format:
+    desc: Run formatters
+    deps: [install]
+    cmds:
+      - find . -type f -name '*.go' ! -path '*/mocks/*' -exec {{.GOFUMPT_PATH}} -extra -w {} +
+      - find . -type f -name '*.go' ! -path '*/mocks/*' -exec {{.GCI_PATH}} write -s standard -s default -s "prefix(github.com/RomanDeveloperGit/shortlink-link-api/)" {} +
+      - find . -type f -name '*.go' ! -path '*/mocks/*' -exec {{.GOLINES_PATH}} -w {} +
