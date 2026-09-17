@@ -4,45 +4,56 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/RomanDeveloperGit/shortlink-link-api/internal/config"
+	"github.com/RomanDeveloperGit/shortlink-link-api/internal/env"
 )
 
-var logger *slog.Logger
+type options struct {
+	env            env.Env
+	serviceName    string
+	serviceVersion string
+}
 
-func MustSetup() {
-	if logger != nil {
-		return
+// Специально сделано, чтобы извне не создавать структуру, где можно забыть указать что-то, а просто дернуть конструктор с контрактом
+func NewOptions(e env.Env, serviceName, serviceVersion string) *options {
+	return &options{
+		env:            e,
+		serviceName:    serviceName,
+		serviceVersion: serviceVersion,
+	}
+}
+
+func MustSetup(opts *options) *slog.Logger {
+	if opts == nil {
+		panic("options is nil")
 	}
 
-	cfg := config.Get()
+	var log *slog.Logger
 
-	switch cfg.Env {
-	case config.EnvLocal:
-		logger = slog.New(
-			NewLocalHandler(
+	switch opts.env {
+	case env.EnvLocal:
+		log = slog.New(
+			newLocalHandler(
 				slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
 			),
 		)
-	case config.EnvDev:
-		logger = slog.New(
+	case env.EnvDev:
+		log = slog.New(
 			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
 		)
-	case config.EnvProd:
-		logger = slog.New(
+	case env.EnvProd:
+		log = slog.New(
 			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}),
 		)
+	default:
+		// Специально паникуем, чтобы при добавлении нового окружения не забыли настроить и логгер осознанно
+		// + "защита от дурака"
+		panic("env is not supported")
 	}
 
-	logger = logger.With(
-		slog.String("service", cfg.ServiceName),
-		slog.String("version", cfg.ServiceVersion),
+	log = log.With(
+		slog.String("service", opts.serviceName),
+		slog.String("version", opts.serviceVersion),
 	)
-}
 
-func Get() *slog.Logger {
-	if logger == nil {
-		panic("logger: MustSetup() was not called")
-	}
-
-	return logger
+	return log
 }

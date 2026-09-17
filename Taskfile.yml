@@ -41,7 +41,7 @@ tasks:
       ENV: 'local'
       SERVICE_NAME: 'shortlink-link-api'
       SERVICE_VERSION: '0.0.0'
-      GRACEFUL_SHUTDOWN_TIMEOUT: '15s'
+      GRACEFUL_SHUTDOWN_PER_RESOURCE_TIMEOUT: '15s'
       HTTP_HOST: '0.0.0.0'
       HTTP_PORT: '8080'
       HTTP_IDLE_TIMEOUT: '10s'

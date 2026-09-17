@@ -6,47 +6,47 @@ import (
 	"os"
 )
 
-type Color string
+type color string
 
 const (
-	RedColor    Color = "\033[31m"
-	YellowColor Color = "\033[33m"
-	GreyColor   Color = "\033[90m"
-	ResetColor  Color = "\033[0m"
+	red    color = "\033[31m"
+	yellow color = "\033[33m"
+	grey   color = "\033[90m"
+	reset  color = "\033[0m"
 )
 
-var typeColorMap = map[slog.Level]Color{
-	slog.LevelDebug: GreyColor,
-	slog.LevelWarn:  YellowColor,
-	slog.LevelError: RedColor,
+var levelColor = map[slog.Level]color{
+	slog.LevelDebug: grey,
+	slog.LevelWarn:  yellow,
+	slog.LevelError: red,
 }
 
-type LocalHandler struct {
+type localHandler struct {
 	baseHandler slog.Handler
 }
 
-func NewLocalHandler(baseHandler slog.Handler) *LocalHandler {
-	return &LocalHandler{baseHandler}
+func newLocalHandler(baseHandler slog.Handler) *localHandler {
+	return &localHandler{baseHandler}
 }
 
-func (lh *LocalHandler) Enabled(ctx context.Context, level slog.Level) bool {
+func (lh *localHandler) Enabled(ctx context.Context, level slog.Level) bool {
 	return lh.baseHandler.Enabled(ctx, level)
 }
 
-func (lh *LocalHandler) Handle(ctx context.Context, r slog.Record) error {
-	if color, ok := typeColorMap[r.Level]; ok {
+func (lh *localHandler) Handle(ctx context.Context, r slog.Record) error {
+	if color, ok := levelColor[r.Level]; ok {
 		os.Stdout.WriteString(string(color))
 
-		defer os.Stdout.WriteString(string(ResetColor))
+		defer os.Stdout.WriteString(string(reset))
 	}
 
 	return lh.baseHandler.Handle(ctx, r)
 }
 
-func (lh *LocalHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
-	return &LocalHandler{baseHandler: lh.baseHandler.WithAttrs(attrs)}
+func (lh *localHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return &localHandler{baseHandler: lh.baseHandler.WithAttrs(attrs)}
 }
 
-func (lh *LocalHandler) WithGroup(name string) slog.Handler {
-	return &LocalHandler{baseHandler: lh.baseHandler.WithGroup(name)}
+func (lh *localHandler) WithGroup(name string) slog.Handler {
+	return &localHandler{baseHandler: lh.baseHandler.WithGroup(name)}
 }

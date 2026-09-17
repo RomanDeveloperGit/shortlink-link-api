@@ -1,27 +1,20 @@
 package config
 
 import (
-	"slices"
 	"time"
 
 	"github.com/caarlos0/env/v11"
-)
 
-type Env string
-
-const (
-	EnvLocal Env = "local"
-	EnvDev   Env = "dev"
-	EnvProd  Env = "prod"
+	internalEnv "github.com/RomanDeveloperGit/shortlink-link-api/internal/env"
 )
 
 type Config struct {
-	Env                     Env           `env:"ENV,required,notEmpty"`
-	ServiceName             string        `env:"SERVICE_NAME,required,notEmpty"`
-	ServiceVersion          string        `env:"SERVICE_VERSION,required,notEmpty"`
-	GracefulShutdownTimeout time.Duration `env:"GRACEFUL_SHUTDOWN_TIMEOUT,required,notEmpty"`
-	HTTPServer              HTTPServer
-	PostgreSQL              PostgreSQL
+	Env                                internalEnv.Env `env:"ENV,required,notEmpty"`
+	ServiceName                        string          `env:"SERVICE_NAME,required,notEmpty"`
+	ServiceVersion                     string          `env:"SERVICE_VERSION,required,notEmpty"`
+	GracefulShutdownPerResourceTimeout time.Duration   `env:"GRACEFUL_SHUTDOWN_PER_RESOURCE_TIMEOUT,required,notEmpty"`
+	HTTPServer                         HTTPServer
+	PostgreSQL                         PostgreSQL
 }
 
 type HTTPServer struct {
@@ -40,39 +33,15 @@ type PostgreSQL struct {
 	DB       string `env:"POSTGRES_DB,required,notEmpty"`
 }
 
-var config *Config
+func MustLoad() *Config {
+	cfg := &Config{}
 
-func isEnvValid(env string) bool {
-	envs := []string{
-		string(EnvLocal),
-		string(EnvDev),
-		string(EnvProd),
-	}
+	// Специально через Must, чтобы вылезла паника в случае некорректного конфига
+	cfg = env.Must(cfg, env.Parse(cfg))
 
-	if slices.Contains(envs, env) {
-		return true
-	}
-
-	return false
-}
-
-func MustLoad() {
-	if config != nil {
-		return
-	}
-
-	config = &Config{}
-	config = env.Must(config, env.Parse(config))
-
-	if !isEnvValid(string(config.Env)) {
+	if !internalEnv.IsValid(string(cfg.Env)) {
 		panic("env is not supported")
 	}
-}
 
-func Get() *Config {
-	if config == nil {
-		panic("config: MustLoad() was not called")
-	}
-
-	return config
+	return cfg
 }
