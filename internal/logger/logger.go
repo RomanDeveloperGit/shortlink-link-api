@@ -7,53 +7,31 @@ import (
 	"github.com/RomanDeveloperGit/shortlink-link-api/internal/env"
 )
 
-type options struct {
-	env            env.Env
-	serviceName    string
-	serviceVersion string
+type Options struct {
+	File           *os.File
+	Env            env.Env
+	ServiceName    string
+	ServiceVersion string
 }
 
-// Специально сделано, чтобы извне не создавать структуру, где можно забыть указать что-то, а просто дернуть конструктор с контрактом
-func NewOptions(e env.Env, serviceName, serviceVersion string) *options {
-	return &options{
-		env:            e,
-		serviceName:    serviceName,
-		serviceVersion: serviceVersion,
-	}
-}
+func MustSetup(opts *Options) *slog.Logger {
+	var handler slog.Handler
 
-func MustSetup(opts *options) *slog.Logger {
-	if opts == nil {
-		panic("options is nil")
-	}
-
-	var log *slog.Logger
-
-	switch opts.env {
+	switch opts.Env {
 	case env.EnvLocal:
-		log = slog.New(
-			newLocalHandler(
-				slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
-			),
-		)
+		handler = newLocalHandler(opts.File)
 	case env.EnvDev:
-		log = slog.New(
-			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
-		)
+		handler = slog.NewJSONHandler(opts.File, &slog.HandlerOptions{Level: slog.LevelDebug})
 	case env.EnvProd:
-		log = slog.New(
-			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}),
-		)
+		handler = slog.NewJSONHandler(opts.File, &slog.HandlerOptions{Level: slog.LevelInfo})
 	default:
-		// Специально паникуем, чтобы при добавлении нового окружения не забыли настроить и логгер осознанно
-		// + "защита от дурака"
+		// Специально паникуем, чтобы при добавлении нового окружения не забыли настроить логгер осознанно + "защита от дурака" (чтобы не передали фигню в виде строки)
+		// Также будет паника, если мы попробуем из env.EnvTest окружения этот логгер инициализировать - пусть свой моковый логгер делает
 		panic("env is not supported")
 	}
 
-	log = log.With(
-		slog.String("service", opts.serviceName),
-		slog.String("version", opts.serviceVersion),
+	return slog.New(handler).With(
+		slog.String("service", opts.ServiceName),
+		slog.String("version", opts.ServiceVersion),
 	)
-
-	return log
 }

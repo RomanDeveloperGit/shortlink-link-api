@@ -8,16 +8,18 @@ const (
 	EnvLocal Env = "local"
 	EnvDev   Env = "dev"
 	EnvProd  Env = "prod"
+	EnvTest  Env = "test"
 )
 
-func IsValid(env string) bool {
+func IsEnv(str string) bool {
 	envs := []string{
 		string(EnvLocal),
 		string(EnvDev),
 		string(EnvProd),
+		string(EnvTest),
 	}
 
-	if slices.Contains(envs, env) {
+	if slices.Contains(envs, str) {
 		return true
 	}
 

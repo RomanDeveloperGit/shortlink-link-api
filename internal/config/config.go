@@ -12,6 +12,8 @@ type Config struct {
 	Env                                internalEnv.Env `env:"ENV,required,notEmpty"`
 	ServiceName                        string          `env:"SERVICE_NAME,required,notEmpty"`
 	ServiceVersion                     string          `env:"SERVICE_VERSION,required,notEmpty"`
+	ShortLinkLength                    int             `env:"SHORT_LINK_LENGTH,required,notEmpty"`
+	AttemptsGenerateShortLinkLimit     int             `env:"ATTEMPTS_GENERATE_SHORT_LINK_LIMIT,required,notEmpty"`
 	GracefulShutdownPerResourceTimeout time.Duration   `env:"GRACEFUL_SHUTDOWN_PER_RESOURCE_TIMEOUT,required,notEmpty"`
 	HTTPServer                         HTTPServer
 	PostgreSQL                         PostgreSQL
@@ -26,11 +28,16 @@ type HTTPServer struct {
 }
 
 type PostgreSQL struct {
-	Host     string `env:"POSTGRES_HOST,required,notEmpty"`
-	Port     int    `env:"POSTGRES_PORT,required,notEmpty"`
-	User     string `env:"POSTGRES_USER,required,notEmpty"`
-	Password string `env:"POSTGRES_PASSWORD,required,notEmpty"`
-	DB       string `env:"POSTGRES_DB,required,notEmpty"`
+	Host            string        `env:"POSTGRES_HOST,required,notEmpty"`
+	Port            int           `env:"POSTGRES_PORT,required,notEmpty"`
+	User            string        `env:"POSTGRES_USER,required,notEmpty"`
+	Password        string        `env:"POSTGRES_PASSWORD,required,notEmpty"`
+	DB              string        `env:"POSTGRES_DB,required,notEmpty"`
+	SSLMode         string        `env:"POSTGRES_SSL_MODE,required,notEmpty"`
+	MaxIdleConns    int           `env:"POSTGRES_MAX_IDLE_CONNS,required,notEmpty"`
+	MaxOpenConns    int           `env:"POSTGRES_MAX_OPEN_CONNS,required,notEmpty"`
+	ConnMaxLifetime time.Duration `env:"POSTGRES_CONN_MAX_LIFETIME,required,notEmpty"`
+	PingTimeout     time.Duration `env:"POSTGRES_PING_TIMEOUT,required,notEmpty"`
 }
 
 func MustLoad() *Config {
@@ -39,7 +46,7 @@ func MustLoad() *Config {
 	// Специально через Must, чтобы вылезла паника в случае некорректного конфига
 	cfg = env.Must(cfg, env.Parse(cfg))
 
-	if !internalEnv.IsValid(string(cfg.Env)) {
+	if !internalEnv.IsEnv(string(cfg.Env)) {
 		panic("env is not supported")
 	}
 

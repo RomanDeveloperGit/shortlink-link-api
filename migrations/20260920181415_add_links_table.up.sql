@@ -1,0 +1,8 @@
+CREATE TABLE links (
+    id BIGSERIAL PRIMARY KEY,
+    short_code VARCHAR(100) NOT NULL,
+    full_url TEXT NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

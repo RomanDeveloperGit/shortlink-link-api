@@ -22,11 +22,15 @@ var levelColor = map[slog.Level]color{
 }
 
 type localHandler struct {
+	file        *os.File
 	baseHandler slog.Handler
 }
 
-func newLocalHandler(baseHandler slog.Handler) *localHandler {
-	return &localHandler{baseHandler}
+func newLocalHandler(file *os.File) *localHandler {
+	return &localHandler{
+		file:        file,
+		baseHandler: slog.NewTextHandler(file, &slog.HandlerOptions{Level: slog.LevelDebug}),
+	}
 }
 
 func (lh *localHandler) Enabled(ctx context.Context, level slog.Level) bool {
@@ -35,18 +39,24 @@ func (lh *localHandler) Enabled(ctx context.Context, level slog.Level) bool {
 
 func (lh *localHandler) Handle(ctx context.Context, r slog.Record) error {
 	if color, ok := levelColor[r.Level]; ok {
-		os.Stdout.WriteString(string(color))
+		lh.file.WriteString(string(color))
 
-		defer os.Stdout.WriteString(string(reset))
+		defer lh.file.WriteString(string(reset))
 	}
 
 	return lh.baseHandler.Handle(ctx, r)
 }
 
 func (lh *localHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
-	return &localHandler{baseHandler: lh.baseHandler.WithAttrs(attrs)}
+	return &localHandler{
+		file: lh.file,
+		baseHandler: lh.baseHandler.WithAttrs(attrs),
+	}
 }
 
 func (lh *localHandler) WithGroup(name string) slog.Handler {
-	return &localHandler{baseHandler: lh.baseHandler.WithGroup(name)}
+	return &localHandler{
+		file: lh.file,
+		baseHandler: lh.baseHandler.WithGroup(name),
+	}
 }
