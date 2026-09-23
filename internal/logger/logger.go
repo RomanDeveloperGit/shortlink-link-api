@@ -4,7 +4,7 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/RomanDeveloperGit/shortlink-link-api/internal/env"
+	"github.com/RomanDeveloperGit/shortlink-link-api/internal/config/env"
 )
 
 type Options struct {

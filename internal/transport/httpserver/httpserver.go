@@ -20,6 +20,9 @@ type HealthHandler interface {
 
 type LinkHandler interface {
 	Create(w http.ResponseWriter, r *http.Request)
+	GetByShortCode(w http.ResponseWriter, r *http.Request)
+	GetByID(w http.ResponseWriter, r *http.Request)
+	Visit(w http.ResponseWriter, r *http.Request)
 }
 
 type Handlers struct {
@@ -44,6 +47,10 @@ func NewHTTPServer(opts *Options) *httpServer {
 	mux.HandleFunc("GET /health", opts.Middleware(opts.Handlers.HealthHandler.Check))
 
 	mux.HandleFunc("POST /api/v1/links", opts.Middleware(opts.Handlers.LinkHandler.Create))
+	mux.HandleFunc("GET /api/v1/links", opts.Middleware(opts.Handlers.LinkHandler.GetByShortCode)) // with "short_code" query!
+	mux.HandleFunc("GET /api/v1/links/{id}", opts.Middleware(opts.Handlers.LinkHandler.GetByID))
+
+	mux.HandleFunc("GET /{short_code}", opts.Middleware(opts.Handlers.LinkHandler.Visit))
 
 	server := &http.Server{
 		Addr:         fmt.Sprintf("%s:%d", opts.Host, opts.Port),
@@ -61,7 +68,9 @@ func NewHTTPServer(opts *Options) *httpServer {
 
 func (hs *httpServer) BackgroundRun() {
 	go func() {
-		hs.logger.Debug("HTTP server started")
+		hs.logger.Debug("HTTP server started",
+			slog.String("addr", hs.server.Addr),
+		)
 
 		if err := hs.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			hs.logger.Error("failed to start HTTP server", slog.String("error", err.Error()))

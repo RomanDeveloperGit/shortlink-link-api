@@ -2,31 +2,33 @@ package link
 
 import (
 	"context"
-	"log/slog"
+	"fmt"
 	"time"
 
 	"github.com/RomanDeveloperGit/shortlink-link-api/internal/model"
-	"github.com/RomanDeveloperGit/shortlink-link-api/internal/pkg/randomstring"
-	"github.com/RomanDeveloperGit/shortlink-link-api/internal/pkg/requestid"
-	"github.com/RomanDeveloperGit/shortlink-link-api/internal/pkg/traceid"
+	"github.com/RomanDeveloperGit/shortlink-link-api/internal/service/link/shortcode"
 )
 
 type LinkRepository interface {
-	Create(ctx context.Context, shortCode, fullURL string, expiresAt time.Time) (*model.Link, error)
+	Create(ctx context.Context, shortCode string, fullURL string, expiresAt time.Time) (*model.Link, error)
+	GetByShortCode(ctx context.Context, shortCode string) (*model.Link, error)
+	GetByID(ctx context.Context, id int) (*model.Link, error)
 }
 
 type service struct {
-	shortLinkLength                int
+	shortCodeLength                int
 	attemptsGenerateShortLinkLimit int
 	linkRepository                 LinkRepository
-	logger                         *slog.Logger
 }
 
-func NewService(linkRepository LinkRepository, logger *slog.Logger, shortLinkLength int, attemptsGenerateShortLinkLimit int) *service {
+func NewService(
+	linkRepository LinkRepository,
+	shortCodeLength int,
+	attemptsGenerateShortLinkLimit int,
+) *service {
 	return &service{
 		linkRepository:                 linkRepository,
-		logger:                         logger,
-		shortLinkLength:                shortLinkLength,
+		shortCodeLength:                shortCodeLength,
 		attemptsGenerateShortLinkLimit: attemptsGenerateShortLinkLimit,
 	}
 }
@@ -36,30 +38,24 @@ func (s *service) Create(ctx context.Context, fullURL string, ttlDays int) (*mod
 	var link *model.Link
 	var err error
 
-	shortCode := randomstring.NewRandomString(s.shortLinkLength)
-	expiresAt := time.Now().UTC().AddDate(0, 0, int(ttlDays))
+	shortCode := shortcode.GenerateShortCode(s.shortCodeLength)
+	expiresAt := time.Now().UTC().AddDate(0, 0, ttlDays)
 
 	for attempts = 0; attempts < s.attemptsGenerateShortLinkLimit && link == nil; attempts++ {
 		link, err = s.linkRepository.Create(ctx, shortCode, fullURL, expiresAt)
 	}
 
-	if link == nil {
-		s.logger.Error("failed to create link",
-			slog.String("short_code", shortCode),
-			slog.String("request_id", requestid.RequestIDFromContext(ctx)),
-			slog.String("trace_id", traceid.TraceIDFromContext(ctx)),
-			slog.String("error", err.Error()),
-		)
-
-		return nil, err
+	if link == nil || err != nil {
+		return nil, fmt.Errorf("failed to create link after %d attempts: %w", attempts, err)
 	}
 
-	s.logger.Info("link created",
-		slog.String("short_code", shortCode),
-		slog.Int("attempts", attempts),
-		slog.String("request_id", requestid.RequestIDFromContext(ctx)),
-		slog.String("trace_id", traceid.TraceIDFromContext(ctx)),
-	)
-
 	return link, nil
+}
+
+func (s *service) GetByShortCode(ctx context.Context, shortCode string) (*model.Link, error) {
+	return s.linkRepository.GetByShortCode(ctx, shortCode)
+}
+
+func (s *service) GetByID(ctx context.Context, id int) (*model.Link, error) {
+	return s.linkRepository.GetByID(ctx, id)
 }

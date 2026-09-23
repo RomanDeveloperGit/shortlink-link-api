@@ -1,3 +1,5 @@
+# Taskfile for dev mode
+
 version: '3'
 
 vars:
@@ -7,13 +9,15 @@ vars:
   GOFUMPT_VERSION: 'v0.12.0'
   GOLINES_VERSION: 'v0.15.0'
   GOLANG_MIGRATE_VERSION: 'v4.20.1'
+  AIR_VERSION: 'v1.67.4'
 
   BIN_DIR: '{{.ROOT_DIR}}/bin'
-  GOLANGCI_LINT_PATH: '{{.BIN_DIR}}/golangci-lint'
-  GCI_PATH: '{{.BIN_DIR}}/gci'
-  GOFUMPT_PATH: '{{.BIN_DIR}}/gofumpt'
-  GOLINES_PATH: '{{.BIN_DIR}}/golines'
-  GOLANG_MIGRATE_PATH: '{{.BIN_DIR}}/migrate'
+  GOLANGCI_LINT: '{{.BIN_DIR}}/golangci-lint'
+  GCI: '{{.BIN_DIR}}/gci'
+  GOFUMPT: '{{.BIN_DIR}}/gofumpt'
+  GOLINES: '{{.BIN_DIR}}/golines'
+  GOLANG_MIGRATE: '{{.BIN_DIR}}/migrate'
+  AIR: '{{.BIN_DIR}}/air'
 
   POSTGRES_HOST: 'localhost'
   POSTGRES_PORT: '5432'
@@ -42,58 +46,46 @@ tasks:
       - go install github.com/daixiang0/gci@{{.GCI_VERSION}}
       - go install mvdan.cc/gofumpt@{{.GOFUMPT_VERSION}}
       - go install github.com/golangci/golines@{{.GOLINES_VERSION}}
+      - go install github.com/air-verse/air@{{.AIR_VERSION}}
       - go install -tags "postgres" github.com/golang-migrate/migrate/v4/cmd/migrate@{{.GOLANG_MIGRATE_VERSION}}
     status:
-      - test -x {{.GOLANGCI_LINT_PATH}}
-      - test -x {{.GCI_PATH}}
-      - test -x {{.GOFUMPT_PATH}}
-      - test -x {{.GOLINES_PATH}}
-      - test -x {{.GOLANG_MIGRATE_PATH}}
+      - test -x {{.GOLANGCI_LINT}}
+      - test -x {{.GCI}}
+      - test -x {{.GOFUMPT}}
+      - test -x {{.GOLINES}}
+      - test -x {{.AIR}}
+      - test -x {{.GOLANG_MIGRATE}}
   lint:
     desc: Run golangci-lint
     deps: [install]
     cmds:
-      - '{{.GOLANGCI_LINT_PATH}} run ./... --config={{.ROOT_DIR}}/.golangci.yml'
+      - '{{.GOLANGCI_LINT}} run ./... --config={{.ROOT_DIR}}/.golangci.yml'
   format:
     desc: Run formatters
     deps: [install]
     cmds:
-      - find . -type f -name '*.go' ! -path '*/mocks/*' -exec {{.GOFUMPT_PATH}} -extra -w {} +
-      - find . -type f -name '*.go' ! -path '*/mocks/*' -exec {{.GCI_PATH}} write -s standard -s default -s "prefix(github.com/RomanDeveloperGit/shortlink-link-api/)" {} +
-      - find . -type f -name '*.go' ! -path '*/mocks/*' -exec {{.GOLINES_PATH}} -w {} +
+      - find . -type f -name '*.go' ! -path '*/mocks/*' -exec {{.GOFUMPT}} -extra -w {} +
+      - find . -type f -name '*.go' ! -path '*/mocks/*' -exec {{.GCI}} write -s standard -s default -s "prefix(github.com/RomanDeveloperGit/shortlink-link-api/)" {} +
+      - find . -type f -name '*.go' ! -path '*/mocks/*' -exec {{.GOLINES}} -w {} +
+  migrate:
+    desc: Run up migration
+    deps: [install]
+    cmds:
+      - '{{.GOLANG_MIGRATE}} -database {{.MIGRATION_DSN}} -path={{.MIGRATION_DIR}} {{.CLI_ARGS}}'
   migrate:create:
     desc: Run create migration
     deps: [install]
     cmds:
-      - '{{.GOLANG_MIGRATE_PATH}} -database {{.MIGRATION_DSN}} create -ext sql -dir {{.MIGRATION_DIR}} {{.CLI_ARGS}}'
-  migrate:up:
-    desc: Run up migration
-    deps: [install]
-    cmds:
-      - '{{.GOLANG_MIGRATE_PATH}} -database {{.MIGRATION_DSN}} -path={{.MIGRATION_DIR}} up {{.CLI_ARGS}}'
-  migrate:force:
-    desc: Run force migration
-    deps: [install]
-    cmds:
-      - '{{.GOLANG_MIGRATE_PATH}} -database {{.MIGRATION_DSN}} -path={{.MIGRATION_DIR}} force {{.CLI_ARGS}}'
-  migrate:down:
-    desc: Run down migration
-    deps: [install]
-    cmds:
-      - '{{.GOLANG_MIGRATE_PATH}} -database {{.MIGRATION_DSN}} -path={{.MIGRATION_DIR}} down {{.CLI_ARGS}}'
-  migrate:version:
-    desc: Run version migration
-    deps: [install]
-    cmds:
-      - '{{.GOLANG_MIGRATE_PATH}} -database {{.MIGRATION_DSN}} -path={{.MIGRATION_DIR}} version'
-  run:
+      - 'task migrate -- create -ext sql -dir {{.MIGRATION_DIR}} {{.CLI_ARGS}}'
+  start:dev:
     desc: Run server
+    deps: [install]
     env:
       ENV: 'local'
       SERVICE_NAME: 'shortlink-link-api'
       SERVICE_VERSION: '0.0.0'
-      SHORT_LINK_LENGTH: '7'
-      ATTEMPTS_GENERATE_SHORT_LINK_LIMIT: '5'
+      SHORT_CODE_LENGTH: '7'
+      ATTEMPTS_GENERATE_SHORT_CODE_LIMIT: '5'
       GRACEFUL_SHUTDOWN_PER_RESOURCE_TIMEOUT: '15s'
       HTTP_HOST: '0.0.0.0'
       HTTP_PORT: '8080'
@@ -111,4 +103,4 @@ tasks:
       POSTGRES_CONN_MAX_LIFETIME: '5m'
       POSTGRES_PING_TIMEOUT: '5s'
     cmds:
-      - go run ./cmd/api
+      - '{{.AIR}} --build.cmd "go build -o bin/api cmd/api/main.go" --build.entrypoint "./bin/api"'

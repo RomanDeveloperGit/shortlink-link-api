@@ -49,14 +49,14 @@ func (lh *localHandler) Handle(ctx context.Context, r slog.Record) error {
 
 func (lh *localHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	return &localHandler{
-		file: lh.file,
+		file:        lh.file,
 		baseHandler: lh.baseHandler.WithAttrs(attrs),
 	}
 }
 
 func (lh *localHandler) WithGroup(name string) slog.Handler {
 	return &localHandler{
-		file: lh.file,
+		file:        lh.file,
 		baseHandler: lh.baseHandler.WithGroup(name),
 	}
 }

@@ -7,15 +7,15 @@ import (
 	"syscall"
 
 	"github.com/RomanDeveloperGit/shortlink-link-api/internal/config"
-	healthHandler "github.com/RomanDeveloperGit/shortlink-link-api/internal/handler/health"
-	linkHandler "github.com/RomanDeveloperGit/shortlink-link-api/internal/handler/link"
 	"github.com/RomanDeveloperGit/shortlink-link-api/internal/infra/db"
 	"github.com/RomanDeveloperGit/shortlink-link-api/internal/logger"
-	"github.com/RomanDeveloperGit/shortlink-link-api/internal/middleware"
 	linkRepository "github.com/RomanDeveloperGit/shortlink-link-api/internal/repository/link"
 	linkService "github.com/RomanDeveloperGit/shortlink-link-api/internal/service/link"
 	httpserver "github.com/RomanDeveloperGit/shortlink-link-api/internal/transport/httpserver"
-	"github.com/go-playground/validator/v10"
+	healthHandler "github.com/RomanDeveloperGit/shortlink-link-api/internal/transport/httpserver/handler/health"
+	linkHandler "github.com/RomanDeveloperGit/shortlink-link-api/internal/transport/httpserver/handler/link"
+	"github.com/RomanDeveloperGit/shortlink-link-api/internal/transport/httpserver/middleware"
+	"github.com/RomanDeveloperGit/shortlink-link-api/internal/transport/httpserver/requestvalidation"
 )
 
 func main() {
@@ -45,15 +45,24 @@ func main() {
 		Logger:                  log,
 	})
 
-	validator := validator.New()
+	validator := requestvalidation.NewValidator()
 
 	healthH := healthHandler.NewHandler()
 
 	linkRepo := linkRepository.NewRepository(database.DB)
-	linkSvc := linkService.NewService(linkRepo, log, cfg.ShortLinkLength, cfg.AttemptsGenerateShortLinkLimit)
-	linkH := linkHandler.NewHandler(linkSvc, validator)
+	linkSvc := linkService.NewService(
+		linkRepo,
+		cfg.ShortCodeLength,
+		cfg.AttemptsGenerateShortLinkLimit,
+	)
+	linkH := linkHandler.NewHandler(linkSvc, validator, log)
 
-	mid := middleware.Wrapper(log)
+	combinedMiddleware := middleware.Combine(
+		middleware.Recovery(log),
+		middleware.TraceID(),
+		middleware.RequestID(),
+		middleware.Logging(log),
+	)
 
 	httpServer := httpserver.NewHTTPServer(&httpserver.Options{
 		Host:                 cfg.HTTPServer.Host,
@@ -62,7 +71,7 @@ func main() {
 		WriteTimeout:         cfg.HTTPServer.WriteTimeout,
 		GracefulShutdownTime: cfg.GracefulShutdownPerResourceTimeout,
 		Logger:               log,
-		Middleware:           mid,
+		Middleware:           combinedMiddleware,
 		Handlers: httpserver.Handlers{
 			HealthHandler: healthH,
 			LinkHandler:   linkH,

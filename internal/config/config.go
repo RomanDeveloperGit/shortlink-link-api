@@ -5,15 +5,15 @@ import (
 
 	"github.com/caarlos0/env/v11"
 
-	internalEnv "github.com/RomanDeveloperGit/shortlink-link-api/internal/env"
+	internalEnv "github.com/RomanDeveloperGit/shortlink-link-api/internal/config/env"
 )
 
 type Config struct {
 	Env                                internalEnv.Env `env:"ENV,required,notEmpty"`
 	ServiceName                        string          `env:"SERVICE_NAME,required,notEmpty"`
 	ServiceVersion                     string          `env:"SERVICE_VERSION,required,notEmpty"`
-	ShortLinkLength                    int             `env:"SHORT_LINK_LENGTH,required,notEmpty"`
-	AttemptsGenerateShortLinkLimit     int             `env:"ATTEMPTS_GENERATE_SHORT_LINK_LIMIT,required,notEmpty"`
+	ShortCodeLength                    int             `env:"SHORT_CODE_LENGTH,required,notEmpty"`
+	AttemptsGenerateShortLinkLimit     int             `env:"ATTEMPTS_GENERATE_SHORT_CODE_LIMIT,required,notEmpty"`
 	GracefulShutdownPerResourceTimeout time.Duration   `env:"GRACEFUL_SHUTDOWN_PER_RESOURCE_TIMEOUT,required,notEmpty"`
 	HTTPServer                         HTTPServer
 	PostgreSQL                         PostgreSQL

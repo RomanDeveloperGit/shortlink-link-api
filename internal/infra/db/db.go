@@ -36,7 +36,6 @@ func MustConnect(cfg *Config) *database {
 		cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.DBName, cfg.SSLMode)
 
 	db, err := sqlx.Open("postgres", dsn)
-
 	if err != nil {
 		panic(err)
 	}
@@ -52,7 +51,13 @@ func MustConnect(cfg *Config) *database {
 		panic(err)
 	}
 
-	cfg.Logger.Debug("database connected")
+	cfg.Logger.Debug("database connected",
+		slog.String("host", cfg.Host),
+		slog.Int("port", cfg.Port),
+		slog.String("user", cfg.User),
+		slog.String("dbname", cfg.DBName),
+		slog.String("sslmode", cfg.SSLMode),
+	)
 
 	return &database{
 		DB:                      db,
