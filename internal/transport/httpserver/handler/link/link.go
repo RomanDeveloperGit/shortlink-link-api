@@ -21,6 +21,7 @@ type LinkService interface {
 	Create(ctx context.Context, fullURL string, ttlDays int) (*model.Link, error)
 	GetByShortCode(ctx context.Context, shortCode string) (*model.Link, error)
 	GetByID(ctx context.Context, id int) (*model.Link, error)
+	Visit(ctx context.Context, shortCode string) (*model.Link, error)
 }
 
 type handler struct {
@@ -156,11 +157,11 @@ func (h *handler) GetByID(w http.ResponseWriter, r *http.Request) {
 func (h *handler) Visit(w http.ResponseWriter, r *http.Request) {
 	shortCode := r.PathValue("short_code")
 
-	link, err := h.linkService.GetByShortCode(r.Context(), shortCode)
+	link, err := h.linkService.Visit(r.Context(), shortCode)
 
 	if err != nil {
 		observability.NewRequestLogger(r.Context(), h.logger).Error(
-			"failed to get link by short code for redirect",
+			"failed to visit link",
 			slog.Any("error", err),
 		)
 

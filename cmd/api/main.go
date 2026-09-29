@@ -5,8 +5,10 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/RomanDeveloperGit/shortlink-link-api/internal/config"
+	"github.com/RomanDeveloperGit/shortlink-link-api/internal/infra/broker"
 	"github.com/RomanDeveloperGit/shortlink-link-api/internal/infra/db"
 	"github.com/RomanDeveloperGit/shortlink-link-api/internal/logger"
 	linkRepository "github.com/RomanDeveloperGit/shortlink-link-api/internal/repository/link"
@@ -30,7 +32,7 @@ func main() {
 		ServiceVersion: cfg.ServiceVersion,
 	})
 
-	database := db.MustConnect(&db.Config{
+	database := db.MustConnect(&db.Options{
 		Host:                    cfg.PostgreSQL.Host,
 		Port:                    cfg.PostgreSQL.Port,
 		User:                    cfg.PostgreSQL.User,
@@ -45,6 +47,14 @@ func main() {
 		Logger:                  log,
 	})
 
+	brk := broker.MustConnect(&broker.Options{
+		Addrs:                   cfg.Kafka.Brokers,
+		User:                    cfg.Kafka.User,
+		Password:                cfg.Kafka.Password,
+		Logger:                  log,
+		GracefulShutdownTimeout: cfg.GracefulShutdownPerResourceTimeout,
+	})
+
 	validator := requestvalidation.NewValidator()
 
 	healthH := healthHandler.NewHandler()
@@ -52,6 +62,7 @@ func main() {
 	linkRepo := linkRepository.NewRepository(database.DB)
 	linkSvc := linkService.NewService(
 		linkRepo,
+		brk.Producer,
 		cfg.ShortCodeLength,
 		cfg.AttemptsGenerateShortLinkLimit,
 	)
@@ -78,7 +89,9 @@ func main() {
 		},
 	})
 
-	httpServer.BackgroundRun()
+	go httpServer.Run()
+
+	time.Sleep(1 * time.Millisecond)
 
 	log.Info("server started")
 
@@ -94,8 +107,8 @@ func main() {
 
 	httpServer.ShutdownGracefully()
 	database.ShutdownGracefully()
+	brk.ShutdownGracefully()
 	// redis.ShutdownGracefully()
-	// kafka.ShutdownGracefully()
 
 	log.Info("server stopped")
 }

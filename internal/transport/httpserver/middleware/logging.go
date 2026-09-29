@@ -15,7 +15,9 @@ const maxBodyLog = 1024
 
 type responseWriter struct {
 	http.ResponseWriter
-	status int
+
+	status   int
+	response string
 }
 
 func (rw *responseWriter) WriteHeader(code int) {
@@ -23,16 +25,23 @@ func (rw *responseWriter) WriteHeader(code int) {
 	rw.ResponseWriter.WriteHeader(code)
 }
 
-func getHeaders(r *http.Request) string {
+func (rw *responseWriter) Write(b []byte) (int, error) {
+	rw.response = string(b)
+
+	return rw.ResponseWriter.Write(b)
+}
+
+func getHeaders(header http.Header) string {
 	headers := strings.Builder{}
 
-	for k, v := range r.Header {
+	for k, v := range header {
 		headers.WriteString(k)
-		headers.WriteString(": ")
-		headers.WriteString(strings.Join(v, ", "))
+		headers.WriteString(":")
+		headers.WriteString(strings.Join(v, ","))
+		headers.WriteString(",")
 	}
 
-	return headers.String()
+	return strings.TrimSuffix(headers.String(), ",")
 }
 
 func getBody(r *http.Request) string {
@@ -67,7 +76,7 @@ func Logging(log *slog.Logger) Middleware {
 				slog.String("method", r.Method),
 				slog.String("path", r.URL.Path),
 				slog.String("query", r.URL.RawQuery),
-				slog.String("headers", getHeaders(r)),
+				slog.String("headers", getHeaders(r.Header)),
 				slog.String("body", getBody(r)),
 				slog.String("remote_addr", r.RemoteAddr),
 			)
@@ -78,6 +87,8 @@ func Logging(log *slog.Logger) Middleware {
 			log.Info("http response",
 				slog.Int("status", rw.status),
 				slog.Duration("duration", time.Since(start)),
+				slog.String("headers", getHeaders(rw.Header())),
+				slog.String("response", rw.response),
 			)
 		})
 	}

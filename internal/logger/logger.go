@@ -27,7 +27,7 @@ func MustSetup(opts *Options) *slog.Logger {
 	default:
 		// Специально паникуем, чтобы при добавлении нового окружения не забыли настроить логгер осознанно + "защита от дурака" (чтобы не передали фигню в виде строки)
 		// Также будет паника, если мы попробуем из env.EnvTest окружения этот логгер инициализировать - пусть свой моковый логгер делает
-		panic("env is not supported")
+		panic("failed to setup logger: env is not supported")
 	}
 
 	return slog.New(handler).With(

@@ -11,7 +11,7 @@ func TraceID() Middleware {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx, id := observability.ContextWithTraceID(
 				r.Context(),
-				w.Header().Get(observability.TraceIDKey),
+				r.Header.Get(observability.TraceIDKey),
 			)
 
 			w.Header().Set(observability.TraceIDKey, id)

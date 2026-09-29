@@ -16,7 +16,7 @@ type database struct {
 	gracefulShutdownTimeout time.Duration
 }
 
-type Config struct {
+type Options struct {
 	Host                    string
 	Port                    int
 	User                    string
@@ -31,38 +31,38 @@ type Config struct {
 	Logger                  *slog.Logger
 }
 
-func MustConnect(cfg *Config) *database {
+func MustConnect(opts *Options) *database {
 	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
-		cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.DBName, cfg.SSLMode)
+		opts.Host, opts.Port, opts.User, opts.Password, opts.DBName, opts.SSLMode)
 
 	db, err := sqlx.Open("postgres", dsn)
 	if err != nil {
-		panic(err)
+		panic(fmt.Errorf("failed to connect to database: %v", err))
 	}
 
-	db.SetMaxIdleConns(cfg.MaxIdleConns)
-	db.SetMaxOpenConns(cfg.MaxOpenConns)
-	db.SetConnMaxLifetime(cfg.ConnMaxLifetime)
+	db.SetMaxIdleConns(opts.MaxIdleConns)
+	db.SetMaxOpenConns(opts.MaxOpenConns)
+	db.SetConnMaxLifetime(opts.ConnMaxLifetime)
 
-	ctx, cancel := context.WithTimeout(context.Background(), cfg.PingTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), opts.PingTimeout)
 	defer cancel()
 
 	if err := db.PingContext(ctx); err != nil {
-		panic(err)
+		panic(fmt.Errorf("failed to ping database: %v", err))
 	}
 
-	cfg.Logger.Debug("database connected",
-		slog.String("host", cfg.Host),
-		slog.Int("port", cfg.Port),
-		slog.String("user", cfg.User),
-		slog.String("dbname", cfg.DBName),
-		slog.String("sslmode", cfg.SSLMode),
+	opts.Logger.Debug("database connected",
+		slog.String("host", opts.Host),
+		slog.Int("port", opts.Port),
+		slog.String("user", opts.User),
+		slog.String("dbname", opts.DBName),
+		slog.String("sslmode", opts.SSLMode),
 	)
 
 	return &database{
 		DB:                      db,
-		logger:                  cfg.Logger,
-		gracefulShutdownTimeout: cfg.GracefulShutdownTimeout,
+		logger:                  opts.Logger,
+		gracefulShutdownTimeout: opts.GracefulShutdownTimeout,
 	}
 }
 
@@ -78,7 +78,7 @@ func (db *database) ShutdownGracefully() {
 	select {
 	case err := <-done:
 		if err != nil {
-			db.logger.Error("failed to shutdown database", slog.String("error", err.Error()))
+			db.logger.Error("failed to shutdown database", slog.Any("error", err))
 			return
 		}
 
@@ -86,6 +86,6 @@ func (db *database) ShutdownGracefully() {
 	case <-ctx.Done():
 		// Но всё, что запустилось при вызове db.DB.Close() может продолжать в фоне висеть и работать
 		// Допускаем такое, потому что у нас стадия Graceful Shutdown
-		db.logger.Error("database shutdown timed out", slog.String("error", ctx.Err().Error()))
+		db.logger.Error("database shutdown timed out", slog.Any("error", ctx.Err()))
 	}
 }

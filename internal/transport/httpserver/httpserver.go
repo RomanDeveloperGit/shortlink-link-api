@@ -66,16 +66,14 @@ func NewHTTPServer(opts *Options) *httpServer {
 	}
 }
 
-func (hs *httpServer) BackgroundRun() {
-	go func() {
-		hs.logger.Debug("HTTP server started",
-			slog.String("addr", hs.server.Addr),
-		)
+func (hs *httpServer) Run() {
+	hs.logger.Debug("HTTP server started",
+		slog.String("addr", hs.server.Addr),
+	)
 
-		if err := hs.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			hs.logger.Error("failed to start HTTP server", slog.String("error", err.Error()))
-		}
-	}()
+	if err := hs.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		hs.logger.Error("failed to start HTTP server", slog.Any("error", err))
+	}
 }
 
 func (hs *httpServer) ShutdownGracefully() {
@@ -83,7 +81,7 @@ func (hs *httpServer) ShutdownGracefully() {
 	defer cancel()
 
 	if err := hs.server.Shutdown(ctx); err != nil {
-		hs.logger.Error("failed to shutdown HTTP server", slog.String("error", err.Error()))
+		hs.logger.Error("failed to shutdown HTTP server", slog.Any("error", err))
 	}
 
 	hs.logger.Debug("HTTP server closed")

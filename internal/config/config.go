@@ -17,6 +17,7 @@ type Config struct {
 	GracefulShutdownPerResourceTimeout time.Duration   `env:"GRACEFUL_SHUTDOWN_PER_RESOURCE_TIMEOUT,required,notEmpty"`
 	HTTPServer                         HTTPServer
 	PostgreSQL                         PostgreSQL
+	Kafka                              Kafka
 }
 
 type HTTPServer struct {
@@ -40,6 +41,12 @@ type PostgreSQL struct {
 	PingTimeout     time.Duration `env:"POSTGRES_PING_TIMEOUT,required,notEmpty"`
 }
 
+type Kafka struct {
+	Brokers  []string `env:"KAFKA_BROKERS,required,notEmpty"`
+	User     string   `env:"KAFKA_USER,required,notEmpty"`
+	Password string   `env:"KAFKA_PASSWORD,required,notEmpty"`
+}
+
 func MustLoad() *Config {
 	cfg := &Config{}
 
@@ -47,7 +54,7 @@ func MustLoad() *Config {
 	cfg = env.Must(cfg, env.Parse(cfg))
 
 	if !internalEnv.IsEnv(string(cfg.Env)) {
-		panic("env is not supported")
+		panic("failed to load config: env is not supported")
 	}
 
 	return cfg
