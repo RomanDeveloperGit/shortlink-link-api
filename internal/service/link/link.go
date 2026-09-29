@@ -89,7 +89,7 @@ func (s *service) Visit(ctx context.Context, shortCode string) (*model.Link, err
 	link, err := s.GetByShortCode(ctx, shortCode)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to get link by short code in visit: %w", err)
+		return nil, err
 	}
 
 	msg, err := json.Marshal(link)

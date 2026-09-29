@@ -161,7 +161,7 @@ func (h *handler) Visit(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		observability.NewRequestLogger(r.Context(), h.logger).Error(
-			"failed to get link by short code for redirect",
+			"failed to get link by short code for visit",
 			slog.Any("error", err),
 		)
 
