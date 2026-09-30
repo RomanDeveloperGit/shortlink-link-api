@@ -11,7 +11,7 @@ type Error struct {
 	Message string
 }
 
-func NewError(code string, message string) *Error {
+func NewError(code, message string) *Error {
 	return &Error{
 		Code:    code,
 		Message: message,

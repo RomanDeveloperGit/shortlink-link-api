@@ -7,16 +7,15 @@ import (
 	"time"
 
 	"github.com/IBM/sarama"
+
 	"github.com/RomanDeveloperGit/shortlink-link-api/internal/model"
 	"github.com/RomanDeveloperGit/shortlink-link-api/internal/service/link/shortcode"
 )
 
-const (
-	linksEventsTopic = "links.events"
-)
+const linksEventsTopic = "links.events"
 
 type LinkRepository interface {
-	Create(ctx context.Context, shortCode string, fullURL string, expiresAt time.Time) (*model.Link, error)
+	Create(ctx context.Context, shortCode, fullURL string, expiresAt time.Time) (*model.Link, error)
 	GetByShortCode(ctx context.Context, shortCode string) (*model.Link, error)
 	GetByID(ctx context.Context, id int) (*model.Link, error)
 }
@@ -47,28 +46,33 @@ func NewService(
 func (s *service) Create(ctx context.Context, fullURL string, ttlDays int) (*model.Link, error) {
 	var attempts int
 	var link *model.Link
-	var err error
+	var repoErr error
 
-	shortCode := shortcode.GenerateShortCode(s.shortCodeLength)
+	shortCode, err := shortcode.GenerateShortCode(s.shortCodeLength)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate short code: %w", err)
+	}
+
 	expiresAt := time.Now().UTC().AddDate(0, 0, ttlDays)
 
 	for attempts = 0; attempts < s.attemptsGenerateShortLinkLimit && link == nil; attempts++ {
-		link, err = s.linkRepository.Create(ctx, shortCode, fullURL, expiresAt)
+		link, repoErr = s.linkRepository.Create(ctx, shortCode, fullURL, expiresAt)
 	}
 
-	if link == nil || err != nil {
-		return nil, fmt.Errorf("failed to create link after %d attempts: %w", attempts, err)
+	if link == nil || repoErr != nil {
+		return nil, fmt.Errorf("failed to create link after %d attempts: %w", attempts, repoErr)
 	}
 
-	msg, err := json.Marshal(link)
-
+	msg, err := json.Marshal(newLinkCreatedMessage(link))
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal link: %w", err)
 	}
 
 	_, _, err = s.producer.SendMessage(&sarama.ProducerMessage{
 		Topic: linksEventsTopic,
-		Key:   sarama.StringEncoder(shortCode), // чтобы событие Visit не было прочитано раньше, чем Create
+		Key: sarama.StringEncoder(
+			shortCode, // чтобы событие Visit не было прочитано раньше, чем Create
+		),
 		Value: sarama.StringEncoder(msg),
 	})
 
@@ -87,13 +91,11 @@ func (s *service) GetByShortCode(ctx context.Context, shortCode string) (*model.
 // Сейчас есть проблема - не даем перейти по ссылке, если брокер упадет. Страдает перфоманс. Операция редиректа должна быть быстрая
 func (s *service) Visit(ctx context.Context, shortCode string) (*model.Link, error) {
 	link, err := s.GetByShortCode(ctx, shortCode)
-
 	if err != nil {
 		return nil, err
 	}
 
-	msg, err := json.Marshal(link)
-
+	msg, err := json.Marshal(newLinkVisitedMessage(link.ID, time.Now().UnixMilli()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal link: %w", err)
 	}
@@ -101,7 +103,9 @@ func (s *service) Visit(ctx context.Context, shortCode string) (*model.Link, err
 	// Всю сущность отдавать? В статистике же она уже есть, поэтому мб только ID + timestamp? для статы
 	_, _, err = s.producer.SendMessage(&sarama.ProducerMessage{
 		Topic: linksEventsTopic,
-		Key:   sarama.StringEncoder(shortCode), // чтобы событие Visit не было прочитано раньше, чем Create
+		Key: sarama.StringEncoder(
+			shortCode, // чтобы событие Visit не было прочитано раньше, чем Create
+		),
 		Value: sarama.StringEncoder(msg),
 	})
 

@@ -71,7 +71,6 @@ func (h *handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	link, err := h.linkService.Create(r.Context(), req.FullURL, req.TTLDays)
-
 	if err != nil {
 		observability.NewRequestLogger(r.Context(), h.logger).Error(
 			"failed to create link",
@@ -96,7 +95,6 @@ func (h *handler) GetByShortCode(w http.ResponseWriter, r *http.Request) {
 	}
 
 	link, err := h.linkService.GetByShortCode(r.Context(), shortCode)
-
 	if err != nil {
 		observability.NewRequestLogger(r.Context(), h.logger).Error(
 			"failed to get link by short code",
@@ -122,7 +120,6 @@ func (h *handler) GetByShortCode(w http.ResponseWriter, r *http.Request) {
 
 func (h *handler) GetByID(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(r.PathValue("id"))
-
 	if err != nil {
 		response.RespondStatus(w, http.StatusBadRequest)
 
@@ -130,7 +127,6 @@ func (h *handler) GetByID(w http.ResponseWriter, r *http.Request) {
 	}
 
 	link, err := h.linkService.GetByID(r.Context(), id)
-
 	if err != nil {
 		observability.NewRequestLogger(r.Context(), h.logger).Error(
 			"failed to get link by id",
@@ -158,7 +154,6 @@ func (h *handler) Visit(w http.ResponseWriter, r *http.Request) {
 	shortCode := r.PathValue("short_code")
 
 	link, err := h.linkService.Visit(r.Context(), shortCode)
-
 	if err != nil {
 		observability.NewRequestLogger(r.Context(), h.logger).Error(
 			"failed to get link by short code for visit",

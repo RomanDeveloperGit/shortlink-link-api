@@ -6,7 +6,7 @@ type Env string
 
 const (
 	EnvLocal Env = "local"
-	EnvDev   Env = "dev"
+	EnvInt   Env = "int"
 	EnvProd  Env = "prod"
 	EnvTest  Env = "test"
 )
@@ -14,7 +14,7 @@ const (
 func IsEnv(str string) bool {
 	envs := []string{
 		string(EnvLocal),
-		string(EnvDev),
+		string(EnvInt),
 		string(EnvProd),
 		string(EnvTest),
 	}

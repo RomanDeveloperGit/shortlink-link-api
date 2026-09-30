@@ -34,13 +34,11 @@ func MustConnect(opts *Options) *broker {
 	// cfg.Net.SASL.Mechanism = sarama.SASLTypeSCRAMSHA512
 	// cfg.Net.SASL.SCRAMClientGeneratorFunc = SCRAMClientGeneratorFunc
 
-	cfg.Producer.Partitioner = sarama.NewRandomPartitioner
 	cfg.Producer.Retry.Max = 3
 	cfg.Producer.RequiredAcks = sarama.WaitForAll
 	cfg.Producer.Return.Successes = true
 
 	producer, err := sarama.NewSyncProducer(opts.Addrs, cfg)
-
 	if err != nil {
 		panic(fmt.Errorf("failed to create kafka producer: %v", err))
 	}

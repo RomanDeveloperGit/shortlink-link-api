@@ -1,4 +1,4 @@
-# Taskfile for dev mode
+# Taskfile for starting cmds on local machine
 
 version: '3'
 
@@ -8,16 +8,16 @@ vars:
   GCI_VERSION: 'v0.14.0'
   GOFUMPT_VERSION: 'v0.12.0'
   GOLINES_VERSION: 'v0.15.0'
-  GOLANG_MIGRATE_VERSION: 'v4.20.1'
   AIR_VERSION: 'v1.67.4'
+  GOLANG_MIGRATE_VERSION: 'v4.20.1'
 
   BIN_DIR: '{{.ROOT_DIR}}/bin'
   GOLANGCI_LINT: '{{.BIN_DIR}}/golangci-lint'
   GCI: '{{.BIN_DIR}}/gci'
   GOFUMPT: '{{.BIN_DIR}}/gofumpt'
   GOLINES: '{{.BIN_DIR}}/golines'
-  GOLANG_MIGRATE: '{{.BIN_DIR}}/migrate'
   AIR: '{{.BIN_DIR}}/air'
+  GOLANG_MIGRATE: '{{.BIN_DIR}}/migrate'
 
   POSTGRES_HOST: 'localhost'
   POSTGRES_PORT: '5432'
@@ -28,6 +28,8 @@ vars:
 
   MIGRATION_DSN: 'postgres://{{.POSTGRES_USER}}:{{.POSTGRES_PASSWORD}}@{{.POSTGRES_HOST}}:{{.POSTGRES_PORT}}/{{.POSTGRES_DB}}?sslmode={{.POSTGRES_SSL_MODE}}'
   MIGRATION_DIR: '{{.ROOT_DIR}}/migrations'
+
+  TEMP_ENV_FILE: 'tmp/.env.local'
 
 tasks:
   bin:
@@ -77,33 +79,59 @@ tasks:
     deps: [install]
     cmds:
       - 'task migrate -- create -ext sql -dir {{.MIGRATION_DIR}} {{.CLI_ARGS}}'
-  start:dev:
-    desc: Run server
-    deps: [install]
-    env:
-      ENV: 'local'
-      SERVICE_NAME: 'shortlink-link-api'
-      SERVICE_VERSION: '0.0.0'
-      SHORT_CODE_LENGTH: '7'
-      ATTEMPTS_GENERATE_SHORT_CODE_LIMIT: '5'
-      GRACEFUL_SHUTDOWN_PER_RESOURCE_TIMEOUT: '15s'
-      HTTP_HOST: '0.0.0.0'
-      HTTP_PORT: '8080'
-      HTTP_IDLE_TIMEOUT: '10s'
-      HTTP_READ_TIMEOUT: '10s'
-      HTTP_WRITE_TIMEOUT: '10s'
-      POSTGRES_HOST: '{{.POSTGRES_HOST}}'
-      POSTGRES_PORT: '{{.POSTGRES_PORT}}'
-      POSTGRES_USER: '{{.POSTGRES_USER}}'
-      POSTGRES_PASSWORD: '{{.POSTGRES_PASSWORD}}'
-      POSTGRES_DB: '{{.POSTGRES_DB}}'
-      POSTGRES_SSL_MODE: '{{.POSTGRES_SSL_MODE}}'
-      POSTGRES_MAX_IDLE_CONNS: '10'
-      POSTGRES_MAX_OPEN_CONNS: '100'
-      POSTGRES_CONN_MAX_LIFETIME: '5m'
-      POSTGRES_PING_TIMEOUT: '5s'
-      KAFKA_BROKERS: 'localhost:9094'
-      KAFKA_USER: 'link-api'
-      KAFKA_PASSWORD: 'link-api-secret'
+  prepare-env-for-start:
+    desc: Prepare env for start
     cmds:
+      - |
+        cat > {{.TEMP_ENV_FILE}} <<EOF
+        ENV=local
+        SERVICE_NAME=shortlink-link-api
+        SERVICE_VERSION=0.0.0
+        SHORT_CODE_LENGTH=7
+        ATTEMPTS_GENERATE_SHORT_CODE_LIMIT=5
+        GRACEFUL_SHUTDOWN_PER_RESOURCE_TIMEOUT=15s
+        HTTP_HOST=0.0.0.0
+        HTTP_PORT=8080
+        HTTP_IDLE_TIMEOUT=10s
+        HTTP_READ_TIMEOUT=10s
+        HTTP_WRITE_TIMEOUT=10s
+        POSTGRES_HOST={{.POSTGRES_HOST}}
+        POSTGRES_PORT={{.POSTGRES_PORT}}
+        POSTGRES_USER={{.POSTGRES_USER}}
+        POSTGRES_PASSWORD={{.POSTGRES_PASSWORD}}
+        POSTGRES_DB={{.POSTGRES_DB}}
+        POSTGRES_SSL_MODE={{.POSTGRES_SSL_MODE}}
+        POSTGRES_MAX_IDLE_CONNS=10
+        POSTGRES_MAX_OPEN_CONNS=100
+        POSTGRES_CONN_MAX_LIFETIME=5m
+        POSTGRES_PING_TIMEOUT=5s
+        KAFKA_BROKERS=localhost:9094
+        KAFKA_USER=link-api
+        KAFKA_PASSWORD=link-api-secret
+        EOF
+  start:local:
+    desc: Run server with AIR
+    deps: [install]
+    dotenv:
+      - '{{.TEMP_ENV_FILE}}'
+    cmds:
+      - task prepare-env-for-start
       - '{{.AIR}} --build.cmd "go build -o bin/api cmd/api/main.go" --build.entrypoint "./bin/api"'
+  start:int:
+    desc: Run server like integration stand
+    deps: [install]
+    dotenv:
+      - '{{.TEMP_ENV_FILE}}'
+    env:
+      ENV: int
+    cmds:
+      - task prepare-env-for-start
+      - go run ./cmd/api/main.go
+  fill:loadtest:
+    desc: Run filling loadetest dataset
+    deps: [install]
+    dotenv:
+      - '{{.TEMP_ENV_FILE}}'
+    cmds:
+      - task prepare-env-for-start
+      - go run ./cmd/fillloadtestdataset/main.go

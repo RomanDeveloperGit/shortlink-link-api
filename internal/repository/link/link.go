@@ -43,7 +43,6 @@ func (r *repository) Create(
 		fullURL,
 		expiresAt,
 	)
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to create link: %w", err)
 	}
@@ -54,18 +53,20 @@ func (r *repository) Create(
 func (r *repository) GetByShortCode(ctx context.Context, shortCode string) (*model.Link, error) {
 	var link model.Link
 
-	var q = `
+	q := `
 		SELECT * FROM links
 		WHERE short_code = $1
 	`
 
 	err := r.db.GetContext(ctx, &link, q, shortCode)
-
 	if err != nil {
 		baseError := fmt.Errorf("failed to get link by short code: %w", err)
 
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, errors.Join(baseError, fmt.Errorf("typed app error: %w", apperror.ErrLinkNotFound))
+			return nil, errors.Join(
+				baseError,
+				fmt.Errorf("typed app error: %w", apperror.ErrLinkNotFound),
+			)
 		}
 
 		return nil, baseError
@@ -77,18 +78,20 @@ func (r *repository) GetByShortCode(ctx context.Context, shortCode string) (*mod
 func (r *repository) GetByID(ctx context.Context, id int) (*model.Link, error) {
 	var link model.Link
 
-	var q = `
+	q := `
 		SELECT * FROM links
 		WHERE id = $1
 	`
 
 	err := r.db.GetContext(ctx, &link, q, id)
-
 	if err != nil {
 		baseError := fmt.Errorf("failed to get link by id: %w", err)
 
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, errors.Join(baseError, fmt.Errorf("typed app error: %w", apperror.ErrLinkNotFound))
+			return nil, errors.Join(
+				baseError,
+				fmt.Errorf("typed app error: %w", apperror.ErrLinkNotFound),
+			)
 		}
 
 		return nil, baseError
