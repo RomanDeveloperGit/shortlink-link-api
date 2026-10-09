@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/RomanDeveloperGit/shortlink-link-api/internal/transport/httpserver/middleware/observability"
+	"github.com/RomanDeveloperGit/shortlink-link-api/internal/pkg/observability"
 )
 
 const maxBodyLog = 1024
@@ -70,7 +70,7 @@ func Logging(log *slog.Logger) Middleware {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
 
-			log = observability.NewRequestLogger(r.Context(), log)
+			log = observability.NewObservedLogger(r.Context(), log)
 
 			log.Info("http request",
 				slog.String("method", r.Method),

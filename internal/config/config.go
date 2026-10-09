@@ -18,6 +18,7 @@ type Config struct {
 	HTTPServer                         HTTPServer
 	PostgreSQL                         PostgreSQL
 	Kafka                              Kafka
+	Redis                              Redis
 }
 
 type HTTPServer struct {
@@ -45,6 +46,14 @@ type Kafka struct {
 	Brokers  []string `env:"KAFKA_BROKERS,required,notEmpty"`
 	User     string   `env:"KAFKA_USER,required,notEmpty"`
 	Password string   `env:"KAFKA_PASSWORD,required,notEmpty"`
+}
+
+type Redis struct {
+	Host        string        `env:"REDIS_HOST,required,notEmpty"`
+	Port        int           `env:"REDIS_PORT,required,notEmpty"`
+	User        string        `env:"REDIS_USER,required,notEmpty"`
+	Password    string        `env:"REDIS_PASSWORD,required,notEmpty"`
+	PingTimeout time.Duration `env:"REDIS_PING_TIMEOUT,required,notEmpty"`
 }
 
 func MustLoad() *Config {

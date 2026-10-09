@@ -3,7 +3,7 @@ package middleware
 import (
 	"net/http"
 
-	"github.com/RomanDeveloperGit/shortlink-link-api/internal/transport/httpserver/middleware/observability"
+	"github.com/RomanDeveloperGit/shortlink-link-api/internal/pkg/observability"
 )
 
 func RequestID() Middleware {

@@ -47,7 +47,10 @@ func NewHTTPServer(opts *Options) *httpServer {
 	mux.HandleFunc("GET /health", opts.Middleware(opts.Handlers.HealthHandler.Check))
 
 	mux.HandleFunc("POST /api/v1/links", opts.Middleware(opts.Handlers.LinkHandler.Create))
-	mux.HandleFunc("GET /api/v1/links", opts.Middleware(opts.Handlers.LinkHandler.GetByShortCode)) // with "short_code" query!
+	mux.HandleFunc(
+		"GET /api/v1/links",
+		opts.Middleware(opts.Handlers.LinkHandler.GetByShortCode),
+	) // with "short_code" query!
 	mux.HandleFunc("GET /api/v1/links/{id}", opts.Middleware(opts.Handlers.LinkHandler.GetByID))
 
 	mux.HandleFunc("GET /{short_code}", opts.Middleware(opts.Handlers.LinkHandler.Visit))

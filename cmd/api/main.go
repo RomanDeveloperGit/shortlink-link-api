@@ -9,6 +9,7 @@ import (
 
 	"github.com/RomanDeveloperGit/shortlink-link-api/internal/config"
 	"github.com/RomanDeveloperGit/shortlink-link-api/internal/infra/broker"
+	"github.com/RomanDeveloperGit/shortlink-link-api/internal/infra/cache"
 	"github.com/RomanDeveloperGit/shortlink-link-api/internal/infra/db"
 	"github.com/RomanDeveloperGit/shortlink-link-api/internal/logger"
 	linkRepository "github.com/RomanDeveloperGit/shortlink-link-api/internal/repository/link"
@@ -32,7 +33,7 @@ func main() {
 		ServiceVersion: cfg.ServiceVersion,
 	})
 
-	database := db.MustConnect(&db.Options{
+	dbClient := db.MustConnect(&db.Options{
 		Host:                    cfg.PostgreSQL.Host,
 		Port:                    cfg.PostgreSQL.Port,
 		User:                    cfg.PostgreSQL.User,
@@ -47,10 +48,21 @@ func main() {
 		Logger:                  log,
 	})
 
-	brk := broker.MustConnect(&broker.Options{
+	brokerClient := broker.MustConnect(&broker.Options{
+		ServiceName:             cfg.ServiceName,
 		Addrs:                   cfg.Kafka.Brokers,
 		User:                    cfg.Kafka.User,
 		Password:                cfg.Kafka.Password,
+		Logger:                  log,
+		GracefulShutdownTimeout: cfg.GracefulShutdownPerResourceTimeout,
+	})
+
+	cacheClient := cache.MustConnect(&cache.Options{
+		Host:                    cfg.Redis.Host,
+		Port:                    cfg.Redis.Port,
+		User:                    cfg.Redis.User,
+		Password:                cfg.Redis.Password,
+		PingTimeout:             cfg.Redis.PingTimeout,
 		Logger:                  log,
 		GracefulShutdownTimeout: cfg.GracefulShutdownPerResourceTimeout,
 	})
@@ -59,10 +71,12 @@ func main() {
 
 	healthH := healthHandler.NewHandler()
 
-	linkRepo := linkRepository.NewRepository(database.DB)
+	linkRepo := linkRepository.NewRepository(dbClient.DB)
 	linkSvc := linkService.NewService(
 		linkRepo,
-		brk.Producer,
+		brokerClient.Producer,
+		cacheClient.RDB,
+		log,
 		cfg.ShortCodeLength,
 		cfg.AttemptsGenerateShortLinkLimit,
 	)
@@ -106,9 +120,9 @@ func main() {
 	stop()
 
 	httpServer.ShutdownGracefully()
-	database.ShutdownGracefully()
-	brk.ShutdownGracefully()
-	// redis.ShutdownGracefully()
+	cacheClient.TryShutdownGracefully()
+	brokerClient.TryShutdownGracefully()
+	dbClient.TryShutdownGracefully()
 
 	log.Info("server stopped")
 }

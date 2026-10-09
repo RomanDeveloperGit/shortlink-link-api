@@ -12,13 +12,18 @@ import (
 
 	"github.com/RomanDeveloperGit/shortlink-link-api/internal/apperror"
 	"github.com/RomanDeveloperGit/shortlink-link-api/internal/model"
-	"github.com/RomanDeveloperGit/shortlink-link-api/internal/transport/httpserver/middleware/observability"
+	"github.com/RomanDeveloperGit/shortlink-link-api/internal/pkg/observability"
 	"github.com/RomanDeveloperGit/shortlink-link-api/internal/transport/httpserver/requestvalidation"
 	"github.com/RomanDeveloperGit/shortlink-link-api/internal/transport/httpserver/response"
 )
 
 type LinkService interface {
-	Create(ctx context.Context, fullURL string, ttlDays int) (*model.Link, error)
+	Create(
+		ctx context.Context,
+		fullURL string,
+		ttlDays int,
+		authorEmail *string,
+	) (*model.Link, error)
 	GetByShortCode(ctx context.Context, shortCode string) (*model.Link, error)
 	GetByID(ctx context.Context, id int) (*model.Link, error)
 	Visit(ctx context.Context, shortCode string) (*model.Link, error)
@@ -43,10 +48,10 @@ func NewHandler(
 }
 
 func (h *handler) Create(w http.ResponseWriter, r *http.Request) {
-	var req CreateLinkRequest
+	var req createLinkRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		observability.NewRequestLogger(r.Context(), h.logger).Error(
+		observability.NewObservedLogger(r.Context(), h.logger).Error(
 			"failed to decode request body",
 			slog.Any("error", err),
 		)
@@ -70,10 +75,9 @@ func (h *handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	link, err := h.linkService.Create(r.Context(), req.FullURL, req.TTLDays)
-
+	link, err := h.linkService.Create(r.Context(), req.FullURL, req.TTLDays, req.AuthorEmail)
 	if err != nil {
-		observability.NewRequestLogger(r.Context(), h.logger).Error(
+		observability.NewObservedLogger(r.Context(), h.logger).Error(
 			"failed to create link",
 			slog.Any("error", err),
 		)
@@ -83,7 +87,7 @@ func (h *handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response.RespondJSON(w, http.StatusCreated, NewLinkResponse(link))
+	response.RespondJSON(w, http.StatusCreated, newLinkResponse(link))
 }
 
 func (h *handler) GetByShortCode(w http.ResponseWriter, r *http.Request) {
@@ -96,9 +100,8 @@ func (h *handler) GetByShortCode(w http.ResponseWriter, r *http.Request) {
 	}
 
 	link, err := h.linkService.GetByShortCode(r.Context(), shortCode)
-
 	if err != nil {
-		observability.NewRequestLogger(r.Context(), h.logger).Error(
+		observability.NewObservedLogger(r.Context(), h.logger).Error(
 			"failed to get link by short code",
 			slog.Any("error", err),
 		)
@@ -117,12 +120,11 @@ func (h *handler) GetByShortCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response.RespondJSON(w, http.StatusOK, NewLinkResponse(link))
+	response.RespondJSON(w, http.StatusOK, newLinkResponse(link))
 }
 
 func (h *handler) GetByID(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(r.PathValue("id"))
-
 	if err != nil {
 		response.RespondStatus(w, http.StatusBadRequest)
 
@@ -130,9 +132,8 @@ func (h *handler) GetByID(w http.ResponseWriter, r *http.Request) {
 	}
 
 	link, err := h.linkService.GetByID(r.Context(), id)
-
 	if err != nil {
-		observability.NewRequestLogger(r.Context(), h.logger).Error(
+		observability.NewObservedLogger(r.Context(), h.logger).Error(
 			"failed to get link by id",
 			slog.Any("error", err),
 		)
@@ -151,16 +152,15 @@ func (h *handler) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response.RespondJSON(w, http.StatusOK, NewLinkResponse(link))
+	response.RespondJSON(w, http.StatusOK, newLinkResponse(link))
 }
 
 func (h *handler) Visit(w http.ResponseWriter, r *http.Request) {
 	shortCode := r.PathValue("short_code")
 
 	link, err := h.linkService.Visit(r.Context(), shortCode)
-
 	if err != nil {
-		observability.NewRequestLogger(r.Context(), h.logger).Error(
+		observability.NewObservedLogger(r.Context(), h.logger).Error(
 			"failed to get link by short code for visit",
 			slog.Any("error", err),
 		)

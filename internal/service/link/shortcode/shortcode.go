@@ -1,20 +1,24 @@
 package shortcode
 
 import (
-	"math/rand"
-	"time"
+	"crypto/rand"
+	"math/big"
 )
 
-var chars = []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
+var chars = []byte("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
 
-func GenerateShortCode(size int) string {
-	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
-
-	b := make([]rune, size)
+func GenerateShortCode(size int) (string, error) {
+	b := make([]byte, size)
+	maxIdx := big.NewInt(int64(len(chars)))
 
 	for i := range b {
-		b[i] = chars[rnd.Intn(len(chars))]
+		n, err := rand.Int(rand.Reader, maxIdx)
+		if err != nil {
+			return "", err
+		}
+
+		b[i] = chars[n.Int64()]
 	}
 
-	return string(b)
+	return string(b), nil
 }

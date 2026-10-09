@@ -8,6 +8,8 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
+
+	"github.com/RomanDeveloperGit/shortlink-link-api/internal/infra/tryshutdowngracefully"
 )
 
 type database struct {
@@ -37,7 +39,7 @@ func MustConnect(opts *Options) *database {
 
 	db, err := sqlx.Open("postgres", dsn)
 	if err != nil {
-		panic(fmt.Errorf("failed to connect to database: %v", err))
+		panic(fmt.Errorf("failed to connect to postgres: %v", err))
 	}
 
 	db.SetMaxIdleConns(opts.MaxIdleConns)
@@ -48,10 +50,10 @@ func MustConnect(opts *Options) *database {
 	defer cancel()
 
 	if err := db.PingContext(ctx); err != nil {
-		panic(fmt.Errorf("failed to ping database: %v", err))
+		panic(fmt.Errorf("failed to ping postgres: %v", err))
 	}
 
-	opts.Logger.Debug("database connected",
+	opts.Logger.Debug("postgres connected",
 		slog.String("host", opts.Host),
 		slog.Int("port", opts.Port),
 		slog.String("user", opts.User),
@@ -66,26 +68,13 @@ func MustConnect(opts *Options) *database {
 	}
 }
 
-func (db *database) ShutdownGracefully() {
-	ctx, cancel := context.WithTimeout(context.Background(), db.gracefulShutdownTimeout)
-	defer cancel()
-
-	done := make(chan error, 1)
-	go func() {
-		done <- db.DB.Close()
-	}()
-
-	select {
-	case err := <-done:
-		if err != nil {
-			db.logger.Error("failed to shutdown database", slog.Any("error", err))
-			return
-		}
-
-		db.logger.Debug("database closed")
-	case <-ctx.Done():
-		// Но всё, что запустилось при вызове db.DB.Close() может продолжать в фоне висеть и работать
-		// Допускаем такое, потому что у нас стадия Graceful Shutdown
-		db.logger.Error("database shutdown timed out", slog.Any("error", ctx.Err()))
-	}
+func (db *database) TryShutdownGracefully() {
+	tryshutdowngracefully.TryShutdownGracefully(
+		func(done chan<- error) {
+			done <- db.DB.Close()
+		},
+		"postgres",
+		db.gracefulShutdownTimeout,
+		db.logger,
+	)
 }

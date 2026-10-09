@@ -1,0 +1,2 @@
+ALTER TABLE links
+ADD COLUMN author_email VARCHAR(255);

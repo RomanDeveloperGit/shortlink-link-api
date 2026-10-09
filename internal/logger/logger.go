@@ -20,7 +20,7 @@ func MustSetup(opts *Options) *slog.Logger {
 	switch opts.Env {
 	case env.EnvLocal:
 		handler = newLocalHandler(opts.File)
-	case env.EnvDev:
+	case env.EnvInt:
 		handler = slog.NewJSONHandler(opts.File, &slog.HandlerOptions{Level: slog.LevelDebug})
 	case env.EnvProd:
 		handler = slog.NewJSONHandler(opts.File, &slog.HandlerOptions{Level: slog.LevelInfo})
