@@ -3,15 +3,17 @@ module github.com/RomanDeveloperGit/shortlink-link-api
 go 1.26.4
 
 require (
+	github.com/IBM/sarama v1.61.0
 	github.com/caarlos0/env/v11 v11.4.1
 	github.com/go-playground/validator/v10 v10.30.4
 	github.com/google/uuid v1.6.0
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/lib/pq v1.12.3
+	github.com/redis/go-redis/v9 v9.22.0
+	github.com/xdg-go/scram v1.2.0
 )
 
 require (
-	github.com/IBM/sarama v1.61.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/eapache/go-resiliency v1.7.0 // indirect
@@ -28,10 +30,7 @@ require (
 	github.com/leodido/go-urn v1.5.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.30 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20250401214520-65e299d6c5c9 // indirect
-	github.com/redis/go-redis/v9 v9.22.0 // indirect
-	github.com/stretchr/testify v1.12.1 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
-	github.com/xdg-go/scram v1.2.0 // indirect
 	github.com/xdg-go/stringprep v1.0.4 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	golang.org/x/crypto v0.57.0 // indirect

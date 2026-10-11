@@ -172,6 +172,13 @@ func (h *handler) Visit(w http.ResponseWriter, r *http.Request) {
 			})
 
 			return
+		} else if errors.Is(err, apperror.ErrLinkExpired) {
+			response.RespondError(w, http.StatusGone, &response.Error{
+				Code:    apperror.ErrLinkExpired.Code,
+				Message: apperror.ErrLinkExpired.Message,
+			})
+
+			return
 		}
 
 		response.RespondStatus(w, http.StatusInternalServerError)

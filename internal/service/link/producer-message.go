@@ -34,9 +34,9 @@ func newLinkCreatedMessage(link *model.Link) *linkCreatedMessage {
 }
 
 type linkVisitedMessage struct {
-	Meta      meta  `json:"meta"`
-	LinkID    int   `json:"linkId"`
-	Timestamp int64 `json:"timestamp"`
+	Meta      meta      `json:"meta"`
+	LinkID    int       `json:"linkId"`
+	Timestamp time.Time `json:"timestamp"`
 }
 
 func newLinkVisitedMessage(linkID int) *linkVisitedMessage {
@@ -46,6 +46,6 @@ func newLinkVisitedMessage(linkID int) *linkVisitedMessage {
 			EventId: uuid.New().String(),
 		},
 		LinkID:    linkID,
-		Timestamp: time.Now().UnixMilli(),
+		Timestamp: time.Now(),
 	}
 }

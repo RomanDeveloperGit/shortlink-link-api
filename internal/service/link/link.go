@@ -11,6 +11,7 @@ import (
 	"github.com/IBM/sarama"
 	"github.com/redis/go-redis/v9"
 
+	"github.com/RomanDeveloperGit/shortlink-link-api/internal/apperror"
 	"github.com/RomanDeveloperGit/shortlink-link-api/internal/model"
 	"github.com/RomanDeveloperGit/shortlink-link-api/internal/pkg/observability"
 	"github.com/RomanDeveloperGit/shortlink-link-api/internal/service/link/shortcode"
@@ -166,6 +167,12 @@ func (s *service) Visit(ctx context.Context, shortCode string) (*model.Link, err
 	link, err := s.GetByShortCode(ctx, shortCode)
 	if err != nil {
 		return nil, err
+	}
+
+	isExpired := link.IsExpired()
+
+	if isExpired {
+		return nil, fmt.Errorf("link is expired: %w", apperror.ErrLinkExpired)
 	}
 
 	msg, err := json.Marshal(newLinkVisitedMessage(link.ID))

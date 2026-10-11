@@ -8,10 +8,6 @@ type createLinkRequest struct {
 	AuthorEmail *string `json:"authorEmail" validate:"omitempty,email"`
 }
 
-func (c *createLinkRequest) hasEmail() bool {
-	return c.AuthorEmail != nil
-}
-
 type linkResponse struct {
 	model.Link
 

@@ -4,6 +4,7 @@ var (
 	ErrValidation = NewError("ERR_VALIDATION", "validation error")
 
 	ErrLinkNotFound = NewError("ERR_LINK_NOT_FOUND", "link not found error")
+	ErrLinkExpired  = NewError("ERR_LINK_EXPIRED", "link expired error")
 )
 
 type Error struct {
