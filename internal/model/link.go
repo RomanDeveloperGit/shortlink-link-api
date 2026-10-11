@@ -15,7 +15,3 @@ type Link struct {
 func (l *Link) IsExpired() bool {
 	return time.Now().After(l.ExpiresAt)
 }
-
-func (l *Link) HasAuthorEmail() bool {
-	return l.AuthorEmail != nil
-}
