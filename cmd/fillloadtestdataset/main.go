@@ -81,9 +81,10 @@ func main() {
 	start := time.Now()
 
 	type input struct {
-		id      int
-		fullUrl string
-		ttlDays int
+		id          int
+		fullUrl     string
+		ttlDays     int
+		authorEmail *string
 	}
 
 	type output struct {
@@ -120,7 +121,12 @@ func main() {
 				}()
 
 				for v := range inputCh {
-					link, err := linkSvc.Create(context.Background(), v.fullUrl, v.ttlDays)
+					link, err := linkSvc.Create(
+						context.Background(),
+						v.fullUrl,
+						v.ttlDays,
+						v.authorEmail,
+					)
 
 					outputCh <- output{
 						id:   v.id,
@@ -146,10 +152,13 @@ func main() {
 		)
 
 		for i := range datasetCount {
+			email := fmt.Sprintf("example%d@mail.ru", i)
+
 			inputCh <- input{
-				id:      i,
-				fullUrl: fmt.Sprintf("https://example.com/%d", i),
-				ttlDays: 1,
+				id:          i,
+				fullUrl:     fmt.Sprintf("https://example.com/%d", i),
+				ttlDays:     1,
+				authorEmail: &email,
 			}
 		}
 
